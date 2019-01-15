@@ -15,6 +15,7 @@
         android:layout_height="wrap_content"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="160dp"
+        android:maxLines="2"
         android:textColor="#333333"
         android:textSize="18sp"
         android:visibility="visible"

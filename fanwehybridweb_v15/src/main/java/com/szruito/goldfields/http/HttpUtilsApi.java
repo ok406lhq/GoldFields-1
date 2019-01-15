@@ -25,13 +25,15 @@ public interface HttpUtilsApi {
     @FormUrlEncoded
     @POST("api/app.util/version/find")
     Observable<UpdateAppInfo> update(
-            @Field("registrationId") String registrationId);
+            @Field("registrationId") String registrationId,
+            @Field("appName") String appName);
 //            @Query("appname") String appname,
 
     @FormUrlEncoded
     @POST("/api/app.util/version/userAddGroup")
     Observable<AddGroupInfo> addGroup(
-            @Field("registrationId") String registrationId);
+            @Field("registrationId") String registrationId,
+            @Field("appName") String appName);
 
     @FormUrlEncoded
     @POST("/api/app.util/version/userRemoveGroup")

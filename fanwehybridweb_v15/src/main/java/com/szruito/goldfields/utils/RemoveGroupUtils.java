@@ -9,7 +9,7 @@ import rx.Observable;
 import rx.Subscriber;
 
 public class RemoveGroupUtils {
-    public static void removeGroup(String registrationId, final RemoveCallBack callBack) {
+    public static void removeGroup(String registrationId,final RemoveCallBack callBack) {
         Observable<RemoveGroupInfo> observable = HttpMethods.getInstance().getApi().removeGroup(registrationId);
         HttpMethods.getInstance().toSubscribe(observable, new Subscriber<RemoveGroupInfo>() {
             @Override

@@ -103,8 +103,9 @@ public class MainHelper {
     }
 
     public void addGroup(final Context context) {
+        final String appName = MainHelper.getInstance().getAppName(context);
         final String registrationId = (String) SPUtils.getParam(context, "registrationId", "");
-        AddGroupUtils.addGroup(registrationId, new AddGroupUtils.AddCallBack() {
+        AddGroupUtils.addGroup(registrationId, appName, new AddGroupUtils.AddCallBack() {
             @Override
             public void onSuccess(AddGroupInfo addGroupInfo) {
                 final int versionCode = FPackageUtil.getPackageInfo().versionCode;
@@ -127,53 +128,59 @@ public class MainHelper {
 
             @Override
             public void onError() {
-                Toast.makeText(context, "申请失败，请稍候重试", Toast.LENGTH_SHORT).show();
+                Toast.makeText(context, "该设备号已存在", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
     public void updateApp(final Context context, final boolean flag) {
+        final String appName = MainHelper.getInstance().getAppName(context);
         final int versionCode = FPackageUtil.getPackageInfo().versionCode;
         final String registrationId = (String) SPUtils.getParam(context, "registrationId", "");
-        CheckUpdateUtils.checkUpdate(registrationId, new CheckUpdateUtils.CheckCallBack() {
+        CheckUpdateUtils.checkUpdate(registrationId, appName, new CheckUpdateUtils.CheckCallBack() {
             @Override
             public void onSuccess(UpdateAppInfo updateInfo) {
-                String isForce = updateInfo.getData().getLastfalse();//是否需要强制更新
-                String downUrl = "http://fields.gold/" + updateInfo.getData().getDownloadurl();//apk下载地址
-                String updateinfo = updateInfo.getData().getUpdateinfo();//apk更新详情
-                String appName = updateInfo.getData().getAppname();
-                String version_code = updateInfo.getData().getVersion_code();
-                String groupType = updateInfo.getData().getGroup_type();
-                SPUtils.setParam(context, "needUpgrade", true);
+                int code = updateInfo.getCode();
+                if (code == 200) {
+                    String isForce = updateInfo.getData().getLastfalse();//是否需要强制更新
+                    String downUrl = "http://fields.gold/" + updateInfo.getData().getDownloadurl();//apk下载地址
+                    String updateinfo = updateInfo.getData().getUpdateinfo();//apk更新详情
+                    String appName = updateInfo.getData().getAppname();
+                    String version_code = updateInfo.getData().getVersion_code();
+                    String groupType = updateInfo.getData().getGroup_type();
+                    SPUtils.setParam(context, "needUpgrade", true);
 
-                if (versionCode < Integer.parseInt(version_code)) { //需要更新
-                    Logger.i("进来了updateApp这个方法");
-                    Logger.i(isForce + "------" + downUrl + " -----"
-                            + updateinfo + " -----" + appName);
-                    if (("1".equals(groupType)) && !TextUtils.isEmpty(updateinfo)) {//测试版需要更新
-                        testUpdate(context, appName, downUrl, updateinfo);
-                        return;
-                    } else if (("0".equals(groupType)) && !TextUtils.isEmpty(updateinfo)) {
-                        normalUpdate(context, appName, downUrl, updateinfo);
-                        return;
-                    }
-                    if (("1".equals(isForce)) && !TextUtils.isEmpty(updateinfo)) {//强制更新
-                        Logger.i("强制更新");
-                        forceUpdate(context, appName, downUrl, updateinfo);
-                    } else {//非强制更新
-                        //正常升级
-                        Logger.i("正常升级");
-                        normalUpdate(context, appName, downUrl, updateinfo);
+                    if (versionCode < Integer.parseInt(version_code)) { //需要更新
+                        Logger.i("进来了updateApp这个方法");
+                        Logger.i(isForce + "------" + downUrl + " -----"
+                                + updateinfo + " -----" + appName);
+                        if (("1".equals(groupType)) && !TextUtils.isEmpty(updateinfo)) {//测试版需要更新
+                            testUpdate(context, appName, downUrl, updateinfo);
+                            return;
+                        } else if (("0".equals(groupType)) && !TextUtils.isEmpty(updateinfo)) {
+                            normalUpdate(context, appName, downUrl, updateinfo);
+                            return;
+                        }
+                        if (("1".equals(isForce)) && !TextUtils.isEmpty(updateinfo)) {//强制更新
+                            Logger.i("强制更新");
+                            forceUpdate(context, appName, downUrl, updateinfo);
+                        } else {//非强制更新
+                            //正常升级
+                            Logger.i("正常升级");
+                            normalUpdate(context, appName, downUrl, updateinfo);
+                        }
+                    } else {
+                        if (flag) {
+                            return;
+                        }
+                        if (("1".equals(groupType)) && !TextUtils.isEmpty(updateinfo)) { //测试版不需要更新
+                            testNoneUpdate(context);
+                        } else {
+                            noneUpdate(context);
+                        }
                     }
                 } else {
-                    if (flag) {
-                        return;
-                    }
-                    if (("1".equals(groupType)) && !TextUtils.isEmpty(updateinfo)) { //测试版不需要更新
-                        testNoneUpdate(context);
-                    } else {
-                        noneUpdate(context);
-                    }
+                    Toast.makeText(context, "当前无版本信息", Toast.LENGTH_SHORT).show();
                 }
             }
 
@@ -289,6 +296,7 @@ public class MainHelper {
                     @Override
                     public void onCheckClick() {
                         final String registrationId = (String) SPUtils.getParam(context, "registrationId", "");
+
                         RemoveGroupUtils.removeGroup(registrationId, new RemoveGroupUtils.RemoveCallBack() {
                             @Override
                             public void onSuccess(RemoveGroupInfo removeGroupInfo) {

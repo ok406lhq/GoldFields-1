@@ -127,6 +127,7 @@ public class MainActivity extends BaseActivity implements OnCropBitmapListner, P
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.act_main);
+//        int a = 10 / 0;//模拟Crash用
 
         //设置状态栏透明化
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED);
@@ -781,15 +782,15 @@ public class MainActivity extends BaseActivity implements OnCropBitmapListner, P
                     }
                     if (url.contains("mine/center") || url.contains("mine/apply") || url.contains("user/center") || url.contains("login")
                             || url.length() <= 42) {     //双击退出App：获取Webview中的一些特殊页面，作物理回退键的处理
-                        if (!isPlay) {
-                            mWebViewCustom.evaluateJavascript("javascript:physicsBack()", new com.tencent.smtt.sdk.ValueCallback<String>() {
-                                @Override
-                                public void onReceiveValue(String s) {
-                                    System.out.println("physicsBack:" + s);
-                                }
-                            });
-                            return false;
-                        }
+//                        if (!isPlay) {
+//                            mWebViewCustom.evaluateJavascript("javascript:physicsBack()", new com.tencent.smtt.sdk.ValueCallback<String>() {
+//                                @Override
+//                                public void onReceiveValue(String s) {
+//                                    System.out.println("physicsBack:" + s);
+//                                }
+//                            });
+//                            return false;
+//                        }
                         //清除用户登录状态及信息
                         if (System.currentTimeMillis() - mExitTime > 2000) {
                             Toast.makeText(MainActivity.this, "再按一次退出", Toast.LENGTH_SHORT).show();

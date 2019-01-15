@@ -24,6 +24,7 @@ import com.szruito.goldfields.dao.LoginSuccessModelDao;
 import com.szruito.goldfields.event.EventTag;
 import com.szruito.goldfields.event.SDBaseEvent;
 import com.szruito.goldfields.model.LoginSuccessModel;
+import com.szruito.goldfields.utils.CrashHandler;
 import com.szruito.goldfields.utils.SPUtils;
 import com.tencent.mm.opensdk.openapi.IWXAPI;
 import com.tencent.mm.opensdk.openapi.WXAPIFactory;
@@ -97,6 +98,8 @@ public class App extends FApplication {
     }
 
     private void init() {
+        CrashHandler crashHandler = CrashHandler.getInstance();
+        crashHandler.init(this);
         initUmengPush();
     }
 

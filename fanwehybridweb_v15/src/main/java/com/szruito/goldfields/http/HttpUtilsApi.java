@@ -3,6 +3,7 @@ package com.szruito.goldfields.http;
 
 import com.szruito.goldfields.bean.AddGroupInfo;
 import com.szruito.goldfields.bean.CheckContactsInfo;
+import com.szruito.goldfields.bean.CrashInfo;
 import com.szruito.goldfields.bean.QuitAppInfo;
 import com.szruito.goldfields.bean.RemoveGroupInfo;
 import com.szruito.goldfields.bean.UpdateAppInfo;
@@ -39,6 +40,11 @@ public interface HttpUtilsApi {
     @POST("/api/app.util/version/userRemoveGroup")
     Observable<RemoveGroupInfo> removeGroup(
             @Field("registrationId") String registrationId);
+
+    @FormUrlEncoded
+    @POST("/api/app.util/crash/crash")
+    Observable<CrashInfo> uploadErr(
+            @Field("info") String info);
 
     @FormUrlEncoded
     @POST("api/app.user/user/clearUserState")

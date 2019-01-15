@@ -1,5 +1,5 @@
 <resources>
-    <!--<string name="app_name">黄金原野</string>-->
+    <string name="app_name">黄金原野</string>
     <string name="title_activity_fullscreen">FullscreenActivity</string>
     <string name="dummy_button">短信</string>
     <string name="dummy_button2">电话</string>

@@ -40,7 +40,7 @@ public class AppUpgradeService extends IntentService {
         final String action = intent.getAction();
         if (ACTION_UPGRADE_SERVICE.equals(action)) {
             if (intent.getBooleanExtra("isUpgrade", false)) {
-                MainHelper.getInstance().updateApp(getApplicationContext());
+                MainHelper.getInstance().updateApp(getApplicationContext(),true);
             }
         }
     }

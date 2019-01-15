@@ -21,8 +21,8 @@ android {
         targetSdkVersion 26
 //        flavorDimensions "versionCode"
         //noinspection HighAppVersionCode
-        versionCode 2019011001
-        versionName "1.0.32"
+        versionCode 2019011501
+        versionName "1.0.33"
 
         ndk {
             //选择要添加的对应 cpu 类型的 .so 库。

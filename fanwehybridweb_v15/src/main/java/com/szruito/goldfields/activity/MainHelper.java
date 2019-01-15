@@ -7,28 +7,25 @@ import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
-import android.os.Handler;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.support.annotation.RequiresApi;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.text.TextUtils;
-import android.util.Base64;
 import android.util.DisplayMetrics;
 import android.view.Display;
-import android.view.View;
 import android.widget.Toast;
 
 import com.szruito.goldfields.app.App;
 import com.szruito.goldfields.bean.AddGroupInfo;
 import com.szruito.goldfields.bean.QuitAppInfo;
+import com.szruito.goldfields.bean.RemoveGroupInfo;
 import com.szruito.goldfields.bean.UpdateAppInfo;
 import com.szruito.goldfields.dialog.CustomDialog;
 import com.szruito.goldfields.dialog.UpdateCustomDialog;
@@ -38,25 +35,18 @@ import com.szruito.goldfields.utils.CheckQuitUtils;
 import com.szruito.goldfields.utils.CheckUpdateUtils;
 import com.szruito.goldfields.utils.IntentUtil;
 import com.szruito.goldfields.utils.QRCodeUtil;
+import com.szruito.goldfields.utils.RemoveGroupUtils;
 import com.szruito.goldfields.utils.SPUtils;
 import com.fanwe.lib.utils.context.FPackageUtil;
 import com.orhanobut.logger.Logger;
-import com.szruito.goldfields.app.App;
-import com.szruito.goldfields.bean.QuitAppInfo;
-import com.szruito.goldfields.bean.UpdateAppInfo;
-import com.szruito.goldfields.utils.CheckUpdateUtils;
-import com.szruito.goldfields.utils.IntentUtil;
 import com.szruito.goldfields.view.ShareView;
 import com.szruito.goldfields.view.ShareView2;
 import com.szruito.goldfields.view.ShareView3;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
@@ -117,20 +107,32 @@ public class MainHelper {
         AddGroupUtils.addGroup(registrationId, new AddGroupUtils.AddCallBack() {
             @Override
             public void onSuccess(AddGroupInfo addGroupInfo) {
+                final int versionCode = FPackageUtil.getPackageInfo().versionCode;
+                String message = addGroupInfo.getMsg();
                 String downUrl = "http://fields.gold/" + addGroupInfo.getData().getDownloadurl();//apk下载地址
                 String appName = addGroupInfo.getData().getAppname();
-                AppInnerDownLoder.downLoadApk(context, downUrl, appName);
-                Toast.makeText(context,"申请成功，已进入下载中...",Toast.LENGTH_SHORT).show();
+                String version_code = addGroupInfo.getData().getVersion_code();
+                int code = addGroupInfo.getCode();
+                if (versionCode < Integer.parseInt(version_code)) {
+                    if (code == 200) {
+                        AppInnerDownLoder.downLoadApk(context, downUrl, appName);
+                        Toast.makeText(context, "申请成功，已进入下载中...", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(context, "恭喜你已加入测试组！当前已是最新版本，请等下一版本推出后再更新测试版", Toast.LENGTH_SHORT).show();
+                }
             }
 
             @Override
             public void onError() {
-                Toast.makeText(context,"申请失败，请稍候重试",Toast.LENGTH_SHORT).show();
+                Toast.makeText(context, "申请失败，请稍候重试", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
-    public void updateApp(final Context context) {
+    public void updateApp(final Context context, final boolean flag) {
         final int versionCode = FPackageUtil.getPackageInfo().versionCode;
         final String registrationId = (String) SPUtils.getParam(context, "registrationId", "");
         CheckUpdateUtils.checkUpdate(registrationId, new CheckUpdateUtils.CheckCallBack() {
@@ -142,6 +144,7 @@ public class MainHelper {
                 String appName = updateInfo.getData().getAppname();
                 String version_code = updateInfo.getData().getVersion_code();
                 String groupType = updateInfo.getData().getGroup_type();
+                SPUtils.setParam(context, "needUpgrade", true);
 
                 if (versionCode < Integer.parseInt(version_code)) { //需要更新
                     Logger.i("进来了updateApp这个方法");
@@ -163,51 +166,20 @@ public class MainHelper {
                         normalUpdate(context, appName, downUrl, updateinfo);
                     }
                 } else {
-                    noneUpdate(context);
+                    if (flag) {
+                        return;
+                    }
+                    if (("1".equals(groupType)) && !TextUtils.isEmpty(updateinfo)) { //测试版不需要更新
+                        testNoneUpdate(context);
+                    } else {
+                        noneUpdate(context);
+                    }
                 }
             }
 
             @Override
             public void onError() {
                 noneUpdate(context);
-                Logger.i("返回信息为空,更新错误!");
-            }
-        });
-    }
-
-
-    //这个方法主要用于优化用户体验，当用户不想更新的时候，记住他的操作并以后不再提示。
-    public void updateApp2(final Context context) {
-        final int versionCode = FPackageUtil.getPackageInfo().versionCode;
-        final String registrationId = (String) SPUtils.getParam(context, "registrationId", "");
-        CheckUpdateUtils.checkUpdate(registrationId, new CheckUpdateUtils.CheckCallBack() {
-            @Override
-            public void onSuccess(UpdateAppInfo updateInfo) {
-                String isForce = updateInfo.getData().getLastfalse();//是否需要强制更新
-                String downUrl = "http://fields.gold/" + updateInfo.getData().getDownloadurl();//apk下载地址
-                String updateinfo = updateInfo.getData().getUpdateinfo();//apk更新详情
-                String appName = updateInfo.getData().getAppname();
-                String version_code = updateInfo.getData().getVersion_code();
-
-                if (versionCode < Integer.parseInt(version_code)) { //需要更新
-                    SPUtils.setParam(context, "needUpgrade", false);
-                    Logger.i("进来了updateApp这个方法");
-                    Logger.i(isForce + "------" + downUrl + " -----"
-                            + updateinfo + " -----" + appName);
-                    if (("1".equals(isForce)) && !TextUtils.isEmpty(updateinfo)) {//强制更新
-                        Logger.i("强制更新");
-                        forceUpdate(context, appName, downUrl, updateinfo);
-                    } else {//非强制更新
-                        //正常升级
-                        Logger.i("正常升级");
-                        normalUpdate(context, appName, downUrl, updateinfo);
-                    }
-                } else {
-                }
-            }
-
-            @Override
-            public void onError() {
                 Logger.i("返回信息为空,更新错误!");
             }
         });
@@ -231,12 +203,30 @@ public class MainHelper {
             public void onNegtiveClick() {
                 mCDialog.dismiss();
             }
-        }).show();
+        }).setCheckdetails("解除内测资格").setOnClickCheckListener(new UpdateCustomDialog.OnClickCheckListener() {
+            @Override
+            public void onCheckClick() {
+                final String registrationId = (String) SPUtils.getParam(context, "registrationId", "");
+                RemoveGroupUtils.removeGroup(registrationId, new RemoveGroupUtils.RemoveCallBack() {
+                    @Override
+                    public void onSuccess(RemoveGroupInfo removeGroupInfo) {
+                        Toast.makeText(context, "解除成功！", Toast.LENGTH_SHORT).show();
+                        mCDialog.dismiss();
+                    }
+
+                    @Override
+                    public void onError() {
+                        Toast.makeText(context, "解除失败，请稍候重试。", Toast.LENGTH_SHORT).show();
+                        mCDialog.dismiss();
+                    }
+                });
+            }
+        }).setPositive("立即更新").setNegtive("暂不更新").show();
 
     }
 
     /**
-     * 无需跟新
+     * 正常版无须更新
      *
      * @param context
      */
@@ -254,16 +244,14 @@ public class MainHelper {
                                 .setMessage("1、所有新功能做完内部初审后都会第一时间向所有内测用户推送。\r\n" +
                                         "2、内测版会有诸多小Bug，如遇到，可以在微信公众号或QQ找我们，我们一定负责到底。\r\n" +
                                         "3、内测意义在于为广大聚客链（原黄金原野）用户找Bug，我们团队再一次感谢您的积极参与。\r\n" +
-                                        "4、每升级一个测试版版本可以获得20算力，算力可用于赚取平台币。\r\n" + "4、每升级一个测试版版本可以获得20算力，算力可用于赚取平台币。")
+                                        "4、每升级一个测试版可获20算力。\r\n" + "5、算力可用于赚取平台币。")
                                 .setPositive("申请更新")
                                 .setNegtive("取消")
                                 .setSingle(false).setOnClickBottomListener(new CustomDialog.OnClickBottomListener() {
                             @Override
                             public void onPositiveClick() {
                                 addGroup(context);
-
                                 customDialog.dismiss();
-
                             }
 
                             @Override
@@ -287,21 +275,67 @@ public class MainHelper {
         }).show();
     }
 
+    /**
+     * 测试版无须更新
+     *
+     * @param context
+     */
+    private void testNoneUpdate(final Context context) {
+        final CustomDialog mCDialog = new CustomDialog(context);
+        mCDialog.setTitle("版本更新")
+                .setMessage("当前已是最新版本，无需更新。")
+                .setCheckdetails("解除内测资格")
+                .setOnClickCheckListener(new CustomDialog.OnClickCheckListener() {
+                    @Override
+                    public void onCheckClick() {
+                        final String registrationId = (String) SPUtils.getParam(context, "registrationId", "");
+                        RemoveGroupUtils.removeGroup(registrationId, new RemoveGroupUtils.RemoveCallBack() {
+                            @Override
+                            public void onSuccess(RemoveGroupInfo removeGroupInfo) {
+                                Toast.makeText(context, "解除成功！", Toast.LENGTH_SHORT).show();
+                                mCDialog.dismiss();
+                            }
+
+                            @Override
+                            public void onError() {
+                                Toast.makeText(context, "解除失败，请稍候重试。", Toast.LENGTH_SHORT).show();
+                                mCDialog.dismiss();
+                            }
+                        });
+                    }
+                })
+                .setSingle(true).setOnClickBottomListener(new CustomDialog.OnClickBottomListener() {
+            @Override
+            public void onPositiveClick() {
+                mCDialog.dismiss();
+            }
+
+            @Override
+            public void onNegtiveClick() {
+                mCDialog.dismiss();
+            }
+        }).show();
+    }
+
+    //正常版更新
     private void normalUpdate(final Context context, final String appName, final String downUrl, final String updateinfo) {
         Logger.i("弹框出现!");
         final UpdateCustomDialog mCDialog = new UpdateCustomDialog(context);
         mCDialog.setTitle("检测到有新版本：" + appName)
                 .setMessage(updateinfo)
-                .setCheck("可点击查看详情，申请获取更新内测版本的资格：")
                 .setPositive("立即更新")
+                .setNegtive("暂不更新")
+                .setCheck("可点击查看详情，申请获取更新内测版本的资格:")
                 .setCheckdetails("查看详情")
                 .setOnClickCheckListener(new UpdateCustomDialog.OnClickCheckListener() {
                     @Override
                     public void onCheckClick() {
                         final CustomDialog customDialog = new CustomDialog(context);
                         customDialog.setTitle("申请内测版须知")
-                                .setMessage("1、所有新功能做完内部初审后都会第一时间向所有内测用户推送。\r\n 2、内测版会有诸多小Bug，如遇到，可以在微信公众号或QQ找我们，我们一定负责到底。\r\n" +
-                                        "3、内测意义在于为广大聚客链（原黄金原野）用户找Bug，我们团队再一次感谢您的积极参与。\r\n4、每升级一次测试版可获20算力。\r\n" + "5、获取的算力可以用来赚取平台币")
+                                .setMessage("1、所有新功能做完内部初审后都会第一时间向所有内测用户推送。\r\n" +
+                                        "2、内测版会有诸多小Bug，如遇到，可以在微信公众号或QQ找我们，我们一定负责到底。\r\n" +
+                                        "3、内测意义在于为广大聚客链（原黄金原野）用户找Bug，我们团队再一次感谢您的积极参与。\r\n" +
+                                        "4、每升级一个测试版版本可获得20算力奖励。\r\n" + "5、算力可用于赚取平台币哦。")
                                 .setPositive("申请更新")
                                 .setNegtive("取消")
                                 .setSingle(false).setOnClickBottomListener(new CustomDialog.OnClickBottomListener() {
@@ -309,7 +343,6 @@ public class MainHelper {
                             public void onPositiveClick() {
                                 addGroup(context);
                                 customDialog.dismiss();
-
                             }
 
                             @Override
@@ -320,7 +353,6 @@ public class MainHelper {
                         mCDialog.dismiss();
                     }
                 })
-                .setNegtive("暂不更新")
                 .setSingle(false).setOnClickBottomListener(new UpdateCustomDialog.OnClickBottomListener() {
             @Override
             public void onPositiveClick() {
@@ -397,7 +429,6 @@ public class MainHelper {
         }
     }
 
-
     private boolean intentAvailable(Context context, Intent intent) {
         PackageManager packageManager = context.getPackageManager();
         List list = packageManager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
@@ -427,6 +458,7 @@ public class MainHelper {
         }
     }
 
+    //清除登录状态
     public void checkNormalQuit(Context context, String user_token) {
         final String _user_token = user_token;
         if (isNetworkAvailable(context)) {
@@ -630,19 +662,6 @@ public class MainHelper {
                         }
                     }).show();
         }
-    }
-
-    /**
-     * @param mobiles
-     * @return 是否手机号码
-     */
-    public static boolean isMobileNO(String mobiles) {
-        String telRegex = "[1][3578]\\d{9}";
-        // "[1]"代表第1位为数字1，"[3578]"代表第二位可以为3、5、8中的一个，"\\d{9}"代表后面是可以是0～9的数字，有9位。
-        if (TextUtils.isEmpty(mobiles)) {
-            return false;
-        } else
-            return mobiles.matches(telRegex);
     }
 
     /**

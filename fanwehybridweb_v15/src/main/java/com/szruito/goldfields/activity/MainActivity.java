@@ -13,7 +13,6 @@ import android.os.Environment;
 import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.annotation.RequiresApi;
-import android.support.v4.content.ContextCompat;
 import android.telephony.PhoneNumberUtils;
 import android.util.Log;
 import android.view.Gravity;
@@ -44,7 +43,6 @@ import com.szruito.goldfields.event.SDBaseEvent;
 import com.szruito.goldfields.jshandler.AppJsHandler;
 import com.szruito.goldfields.model.CutPhotoModel;
 import com.szruito.goldfields.netstate.TANetWorkUtil;
-import com.szruito.goldfields.utils.AppInnerDownLoder;
 import com.szruito.goldfields.utils.DataCleanManager;
 import com.szruito.goldfields.utils.IntentUtil;
 import com.szruito.goldfields.dialog.LoadingDialog;
@@ -83,6 +81,7 @@ import static com.szruito.goldfields.constant.Constant.PERMISS_ALL;
 import static com.szruito.goldfields.constant.Constant.PERMISS_CAMERA;
 import static com.szruito.goldfields.constant.Constant.PERMISS_CONTACT;
 import static com.szruito.goldfields.constant.Constant.PERMISS_SMS;
+import static com.szruito.goldfields.constant.Constant.PERMISS_DX;
 
 @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
 public class MainActivity extends BaseActivity implements OnCropBitmapListner, PlatformActionListener {
@@ -112,10 +111,13 @@ public class MainActivity extends BaseActivity implements OnCropBitmapListner, P
     private boolean isLogout, needUpgrade;
     private boolean isDeleteCache = false;
     private String failLocationUrl = "file:///android_asset/new_no_network.html";
+    private String SHARE_TITLE;
+    private String SHARE_TEXT;
 
     String[] permissions = {Manifest.permission.READ_CONTACTS, Manifest.permission.READ_CALL_LOG,
             Manifest.permission.READ_PHONE_STATE, Manifest.permission.CAMERA, Manifest.permission.SEND_SMS,
-            Manifest.permission.CALL_PHONE, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE,};
+            Manifest.permission.CALL_PHONE};
+    String[] initPermissions = {Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE};
     private String phone, username, errorUrl, token, gender, icon, userId, name, platformName, pingTaiName, UnLockPTName;
     private boolean isPlay = true;
     private String registrationId;
@@ -125,120 +127,39 @@ public class MainActivity extends BaseActivity implements OnCropBitmapListner, P
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.act_main);
+
         //设置状态栏透明化
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED);
         setTranslucent(this);
         //checkNormalQuit();//清除登录状态
         checkBottomNav();//检查是否有虚拟底部导航,保存在本地
-        mIsExitApp = true;
+
+        initConstants();    //初始化一些常量
+        initView();     //初始化视图
+
         x.view().inject(this);
         //初次进入应用后的版本更新处理（这里有个bug Tag住）
-        needUpgrade = (boolean) SPUtils.getParam(MainActivity.this, "needUpgrade", true);
-        if (needUpgrade) {
-            MainHelper.getInstance().updateApp2(MainActivity.this);
+        needUpgrade = (boolean) SPUtils.getParam(MainActivity.this, "needUpgrade", false);
+        if (!needUpgrade) {
+            MainHelper.getInstance().updateApp(MainActivity.this, true);
         }
-        init();
+
+        MainHelper.getInstance().addPermissByPermissionList(MainActivity.this, initPermissions, PERMISS_DX);
+    }
+
+    private void initConstants() {
+        mIsExitApp = true;
+        SHARE_TITLE = MainHelper.getInstance().getAppName(MainActivity.this) + "——专为您打造的区块链价值共享平台！";
+        SHARE_TEXT = "我正在使用《" + MainHelper.getInstance().getAppName(MainActivity.this) + "》快来跟我一起使用吧";
         //获取设备ID
         registrationId = JPushInterface.getRegistrationID(this);
+        SPUtils.setParam(this, "registrationId", registrationId);
         //获取应用程序名称
         appName = MainHelper.getInstance().getAppName(MainActivity.this);
-//        Toast.makeText(this, "id:" + registrationID, Toast.LENGTH_LONG).show();
-        SPUtils.setParam(this, "registrationId", registrationId);
         Logger.i("是否存在底部导航：" + MainHelper.getInstance().checkHasNavigationBar(MainActivity.this));
     }
 
-    /**
-     * 销毁保存当前URL
-     */
-    @Override
-    protected void onSaveInstanceState(Bundle savedInstanceState) {
-        super.onSaveInstanceState(savedInstanceState);
-        String url = mWebViewCustom.getUrl();
-        savedInstanceState.putString(SAVE_CURRENT_URL, url);
-    }
-
-    /**
-     * 恢复时候加载销毁时候的URL
-     */
-    public void onRestoreInstanceState(Bundle savedInstanceState) {
-        super.onRestoreInstanceState(savedInstanceState);
-        String url = savedInstanceState.getString(SAVE_CURRENT_URL);
-        mWebViewCustom.get(url);
-    }
-
-    protected void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);
-        setIntent(intent);
-        if (getIntent().hasExtra(EXTRA_URL) & getIntent().getExtras() != null) {
-            mCurrentUrl = getIntent().getExtras().getString(EXTRA_URL);
-            mWebViewCustom.get(mCurrentUrl);
-        }
-    }
-
-    public static void setTranslucent(Activity activity) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-            // 设置状态栏透明
-            activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
-        }
-    }
-
-    @Override
-    protected void onStart() {
-        if ((boolean) SPUtils.getParam(MainActivity.this, "checkHasNavigationBar", false)) {
-            hideBottomMenu();//隐藏底部
-        }
-        super.onStart();
-    }
-
-    private void checkBottomNav() {
-        boolean checkHasNavigationBar = MainHelper.getInstance().checkHasNavigationBar(MainActivity.this);
-        SPUtils.setParam(MainActivity.this, "checkHasNavigationBar", checkHasNavigationBar);
-    }
-
-    /**
-     * requestPermissions的回调
-     * 一个或多个权限请求结果回调
-     */
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        boolean hasAllGranted = true;
-        //判断是否拒绝  拒绝后要怎么处理 以及取消再次提示的处理
-        for (int grantResult : grantResults) {
-            if (grantResult == PackageManager.PERMISSION_DENIED) {
-                hasAllGranted = false;
-                break;
-            }
-        }
-        switch (requestCode) { //同意权限的处理
-            case PERMISS_CONTACT:   //获取通讯录的动态权限
-                Logger.i("通讯录");
-                if (hasAllGranted) {        //同意权限做的处理,开启服务提交通讯录
-                    ContactIntentService.startActionContact(MainActivity.this);
-                } else {                    //拒绝权限且权限被手动不再提示做的处理,打开权限
-                    MainHelper.getInstance().dealwithPermiss(MainActivity.this, permissions[0]);
-                }
-                break;
-            case PERMISS_CAMERA:    //获取相机的动态权限
-                if (!hasAllGranted) {
-                    MainHelper.getInstance().dealwithPermiss(MainActivity.this, permissions[0]);
-                }
-                break;
-            case PERMISS_SMS:       //获取短信的动态权限
-                if (!hasAllGranted) {
-                    MainHelper.getInstance().dealwithPermiss(MainActivity.this, permissions[0]);
-                }
-                break;
-            case PERMISS_ALL:       //获取所有权限
-                Logger.i("所有权限");
-                break;
-            default:
-                Logger.i("其他");
-                break;
-        }
-    }
-
-    private void init() {
+    private void initView() {
         //初始化加载界面Loading
         SpinKitView spinKitView = loadingLayout.findViewById(R.id.spin_kit);
         Button mBtnWait = loadingLayout.findViewById(R.id.btn_wait);
@@ -250,7 +171,6 @@ public class MainActivity extends BaseActivity implements OnCropBitmapListner, P
             SPUtils.setParam(MainActivity.this, "isFirstLoading", false);
             mBtnWait.setVisibility(View.VISIBLE);
             mBtnWait.setText("初次加载数据，可能会花费几分钟...");
-
         } else {
             mBtnWait.setVisibility(View.VISIBLE);
             mBtnWait.setText("正在加载数据中...");
@@ -259,6 +179,26 @@ public class MainActivity extends BaseActivity implements OnCropBitmapListner, P
         getIntentInfo();
         initErrorPage();
         initWebView();
+    }
+
+
+    private void getIntentInfo() {
+        if (getIntent().hasExtra(EXTRA_URL) & getIntent().getExtras() != null) {
+            mCurrentUrl = getIntent().getExtras().getString(EXTRA_URL);
+        }
+    }
+
+    private void checkBottomNav() {
+        boolean checkHasNavigationBar = MainHelper.getInstance().checkHasNavigationBar(MainActivity.this);
+        SPUtils.setParam(MainActivity.this, "checkHasNavigationBar", checkHasNavigationBar);
+        Logger.i("是否存在底部导航：" + checkHasNavigationBar);
+    }
+
+    public static void setTranslucent(Activity activity) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            // 设置状态栏透明
+            activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+        }
     }
 
     /***
@@ -299,11 +239,6 @@ public class MainActivity extends BaseActivity implements OnCropBitmapListner, P
         }
     }
 
-    private void getIntentInfo() {
-        if (getIntent().hasExtra(EXTRA_URL) & getIntent().getExtras() != null) {
-            mCurrentUrl = getIntent().getExtras().getString(EXTRA_URL);
-        }
-    }
 
     private void initWebView() {
         String url = ApkConstant.SERVER_URL + "?version=" + MainHelper.getInstance().getVersionCode(this);
@@ -355,23 +290,19 @@ public class MainActivity extends BaseActivity implements OnCropBitmapListner, P
                 }
                 Logger.i("嘻嘻：" + url);
                 username = (String) SPUtils.getParam(MainActivity.this, "username", "");
-
-                //记住账户
+                /**
+                 * 该交互实现了登录页面的记住账户功能
+                 */
                 view.evaluateJavascript("javascript:rememberUsername('" + username + "','" + registrationId + "')", new com.tencent.smtt.sdk.ValueCallback<String>() {
                     @Override
                     public void onReceiveValue(String s) {
                         Logger.i("rememberUsername" + s);
                     }
                 });
-//                view.evaluateJavascript("javascript:getAppName(" + appName + ")", new com.tencent.smtt.sdk.ValueCallback<String>() {
-//                    @Override
-//                    public void onReceiveValue(String s) {
-//                        Logger.i("getAppName" + s);
-//                    }
-//                });
-
-                //记住账户
-                view.evaluateJavascript("javascript:getAppName('" + appName +  "')", new com.tencent.smtt.sdk.ValueCallback<String>() {
+                /**
+                 * 该交互是为了传递App名称给vue，方便做多渠道App的开发
+                 */
+                view.evaluateJavascript("javascript:getAppName('" + appName + "')", new com.tencent.smtt.sdk.ValueCallback<String>() {
                     @Override
                     public void onReceiveValue(String s) {
                         Logger.i("appName" + s);
@@ -385,11 +316,14 @@ public class MainActivity extends BaseActivity implements OnCropBitmapListner, P
                 }
                 switch (endUrl) {
                     case "/user/setup":
+                        /**
+                         * 该交互的目的是标记vue上版本更新的的badge
+                         */
                         String json = "{'version':'" + MainHelper.getInstance().getVersionName(MainActivity.this) + "'}";
                         view.evaluateJavascript("javascript:getVersionName(" + json + ")", new com.tencent.smtt.sdk.ValueCallback<String>() {
                             @Override
                             public void onReceiveValue(String s) {
-                                Logger.i(s);
+                                Logger.i("getVersionName" + s);
                             }
                         });
                         break;
@@ -467,6 +401,62 @@ public class MainActivity extends BaseActivity implements OnCropBitmapListner, P
         webParentView.addView(mErrorView, 0, layoutParams); //添加自定义的错误提示的View
     }
 
+    /**
+     * 裁剪图片
+     */
+    private void clickll_head() {
+        if (mBotPhotoPopupView != null) {
+            if (mBotPhotoPopupView.isShowing()) {
+                mBotPhotoPopupView.dismiss();
+            } else {
+                mBotPhotoPopupView.showAtLocation(mll_fl, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL, 0, 0); // 设置layout在PopupWindow中显示的位置
+            }
+        } else {
+            mBotPhotoPopupView = new BotPhotoPopupView(this);
+            mBotPhotoPopupView.showAtLocation(mll_fl, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL, 0, 0); // 设置layout在PopupWindow中显示的位置
+        }
+    }
+
+    private void checkDeleteCache() {
+        if (isDeleteCache) {
+            //webview缓存
+            //清空所有Cookie
+            CookieSyncManager.createInstance(getApplicationContext());  //Create a singleton CookieSyncManager within a context
+            CookieManager cookieManager = CookieManager.getInstance(); // the singleton CookieManager instance
+            cookieManager.removeAllCookie();// Removes all cookies.
+            CookieSyncManager.getInstance().sync(); // forces sync manager to sync now
+            mWebViewCustom.setWebChromeClient(null);
+            mWebViewCustom.setWebViewClient(null);
+            mWebViewCustom.getSettings().setJavaScriptEnabled(false);
+            mWebViewCustom.clearCache(true);
+            mWebViewCustom.clearHistory();
+            //安卓自带缓存
+            try {
+                DataCleanManager.cleanInternalCache(MainActivity.this);
+                Logger.i("清除缓存后：" + DataCleanManager.getCacheSize(MainActivity.this.getCacheDir()));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    //第三方登录授权
+    private void doAuthorize(Platform platform) {
+        if (platform != null) {
+            platform.removeAccount(true);   //清除本地授权缓存
+            platform.SSOSetting(false);     //设置SSO，false表示SSO生效
+            platform.setPlatformActionListener(this);
+            if (!platform.isClientValid()) {    //判断客户端是否存在
+                Toast.makeText(MainActivity.this, "请安装相关客户端", Toast.LENGTH_SHORT).show();
+            }
+            if (platform.isAuthValid()) {    //判断是否已经授权
+                Toast.makeText(MainActivity.this, "已经授权过了", Toast.LENGTH_SHORT).show();
+            }
+            platform.showUser(null);    //要数据不要功能，主要体现在不会重复出现授权界面
+            //platform.authorize();     //要功能不要数据
+        }
+    }
+
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
     @Override
     public void onMainEvent(SDBaseEvent event) {
@@ -483,7 +473,7 @@ public class MainActivity extends BaseActivity implements OnCropBitmapListner, P
                 new Handler().postDelayed(new Runnable() {
                     @Override
                     public void run() {
-                        MainHelper.getInstance().updateApp(MainActivity.this);
+                        MainHelper.getInstance().updateApp(MainActivity.this, false);
                         dialog.dismiss();
                     }
                 }, 1500);
@@ -556,9 +546,9 @@ public class MainActivity extends BaseActivity implements OnCropBitmapListner, P
             case EventTag.SHARE_URL:   //分享链接
                 OnekeyShare oks2 = new OnekeyShare();
                 oks2.disableSSOWhenAuthorize();//关闭sso授权
-                oks2.setTitle(Constant.SHARE_TITLE);
+                oks2.setTitle(SHARE_TITLE);
                 oks2.setUrl(Constant.SHARE_URL);
-                oks2.setText(Constant.SHARE_TEXT);
+                oks2.setText(SHARE_TEXT);
                 oks2.setImageUrl(Constant.SHARE_IMAGE_URL);
                 oks2.setPlatform(Wechat.NAME);
                 oks2.show(this);
@@ -660,18 +650,84 @@ public class MainActivity extends BaseActivity implements OnCropBitmapListner, P
     }
 
     /**
-     * 裁剪图片
+     * 销毁保存当前URL
      */
-    private void clickll_head() {
-        if (mBotPhotoPopupView != null) {
-            if (mBotPhotoPopupView.isShowing()) {
-                mBotPhotoPopupView.dismiss();
-            } else {
-                mBotPhotoPopupView.showAtLocation(mll_fl, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL, 0, 0); // 设置layout在PopupWindow中显示的位置
+    @Override
+    protected void onSaveInstanceState(Bundle savedInstanceState) {
+        super.onSaveInstanceState(savedInstanceState);
+        String url = mWebViewCustom.getUrl();
+        savedInstanceState.putString(SAVE_CURRENT_URL, url);
+    }
+
+    /**
+     * 恢复时候加载销毁时候的URL
+     */
+    public void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        String url = savedInstanceState.getString(SAVE_CURRENT_URL);
+        mWebViewCustom.get(url);
+    }
+
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        if (getIntent().hasExtra(EXTRA_URL) & getIntent().getExtras() != null) {
+            mCurrentUrl = getIntent().getExtras().getString(EXTRA_URL);
+            mWebViewCustom.get(mCurrentUrl);
+        }
+    }
+
+    @Override
+    protected void onStart() {
+        if ((boolean) SPUtils.getParam(MainActivity.this, "checkHasNavigationBar", false)) {
+            hideBottomMenu();//隐藏底部
+        }
+        super.onStart();
+    }
+
+    /**
+     * requestPermissions的回调
+     * 一个或多个权限请求结果回调
+     */
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        boolean hasAllGranted = true;
+        //判断是否拒绝  拒绝后要怎么处理 以及取消再次提示的处理
+        for (int grantResult : grantResults) {
+            if (grantResult == PackageManager.PERMISSION_DENIED) {
+                hasAllGranted = false;
+                break;
             }
-        } else {
-            mBotPhotoPopupView = new BotPhotoPopupView(this);
-            mBotPhotoPopupView.showAtLocation(mll_fl, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL, 0, 0); // 设置layout在PopupWindow中显示的位置
+        }
+        switch (requestCode) { //同意权限的处理
+            case PERMISS_CONTACT:   //获取通讯录的动态权限
+                Logger.i("通讯录");
+                if (hasAllGranted) {        //同意权限做的处理,开启服务提交通讯录
+                    ContactIntentService.startActionContact(MainActivity.this);
+                } else {                    //拒绝权限且权限被手动不再提示做的处理,打开权限
+                    MainHelper.getInstance().dealwithPermiss(MainActivity.this, permissions[0]);
+                }
+                break;
+            case PERMISS_CAMERA:    //获取相机的动态权限
+                if (!hasAllGranted) {
+                    MainHelper.getInstance().dealwithPermiss(MainActivity.this, permissions[0]);
+                }
+                break;
+            case PERMISS_SMS:       //获取短信的动态权限
+                if (!hasAllGranted) {
+                    MainHelper.getInstance().dealwithPermiss(MainActivity.this, permissions[0]);
+                }
+                break;
+            case PERMISS_DX:
+                Logger.i("读写权限");
+                break;
+            case PERMISS_ALL:       //获取所有权限
+                Logger.i("所有权限");
+                break;
+            default:        //其他
+                Logger.i("其他");
+                break;
         }
     }
 
@@ -755,51 +811,11 @@ public class MainActivity extends BaseActivity implements OnCropBitmapListner, P
         }
     }
 
-    private void checkDeleteCache() {
-        if (isDeleteCache) {
-            //webview缓存
-            //清空所有Cookie
-            CookieSyncManager.createInstance(getApplicationContext());  //Create a singleton CookieSyncManager within a context
-            CookieManager cookieManager = CookieManager.getInstance(); // the singleton CookieManager instance
-            cookieManager.removeAllCookie();// Removes all cookies.
-            CookieSyncManager.getInstance().sync(); // forces sync manager to sync now
-            mWebViewCustom.setWebChromeClient(null);
-            mWebViewCustom.setWebViewClient(null);
-            mWebViewCustom.getSettings().setJavaScriptEnabled(false);
-            mWebViewCustom.clearCache(true);
-            mWebViewCustom.clearHistory();
-            //安卓自带缓存
-            try {
-                DataCleanManager.cleanInternalCache(MainActivity.this);
-                Logger.i("清除缓存后：" + DataCleanManager.getCacheSize(MainActivity.this.getCacheDir()));
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
     @Override
     protected void onDestroy() {
         LogUtil.d("应用已经退出");
         checkDeleteCache();
         super.onDestroy();
-    }
-
-    //第三方登录授权
-    private void doAuthorize(Platform platform) {
-        if (platform != null) {
-            platform.removeAccount(true);   //清除本地授权缓存
-            platform.SSOSetting(false);     //设置SSO，false表示SSO生效
-            platform.setPlatformActionListener(this);
-            if (!platform.isClientValid()) {    //判断客户端是否存在
-                Toast.makeText(MainActivity.this, "请安装相关客户端", Toast.LENGTH_SHORT).show();
-            }
-            if (platform.isAuthValid()) {    //判断是否已经授权
-                Toast.makeText(MainActivity.this, "已经授权过了", Toast.LENGTH_SHORT).show();
-            }
-            platform.showUser(null);    //要数据不要功能，主要体现在不会重复出现授权界面
-            //platform.authorize();     //要功能不要数据
-        }
     }
 
     @Override

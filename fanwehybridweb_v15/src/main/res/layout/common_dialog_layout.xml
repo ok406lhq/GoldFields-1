@@ -23,55 +23,66 @@
         android:visibility="visible"
         tools:text="消息提示" />
 
-    <ImageView
-        android:id="@+id/image"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:layout_marginLeft="16dp"
-        android:layout_marginRight="16dp"
-        android:layout_marginBottom="10dp"
-        android:maxWidth="150dp"
-        android:maxHeight="150dp"
-        android:visibility="visible" />
-
-    <TextView
-        android:id="@+id/message"
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginLeft="20dp"
-        android:layout_marginRight="20dp"
-        android:gravity="center|left"
-        android:lineSpacingExtra="3dp"
-        android:lineSpacingMultiplier="1.2"
-        android:textColor="#999999"
-        android:paddingBottom="@dimen/linepaddingbutton"
-        android:textSize="14dp"
-        tools:text="1、注意，请不要在正式商用网站及自己生产环境的面板申请测试版。
-2、所有新功能做完内部初审后都会第一时间向所有内测用户推送。
-3、内测版会有诸多小Bug，如遇到，可以论坛或QQ找我们，我们一定负责到底。
-4、内测意义在于为广大宝塔用户找Bug，宝塔团队再一次感谢您的积极参与。
-5、如果你不是愿意付出及肯折腾学习的人，我们不建议申请内测。
-6、每升级一个宝塔测试版版本可以获得50个宝塔币，宝塔币可用于兑换礼品。" />
+        android:layout_height="match_parent">
 
-    <TextView
-        android:id="@+id/tv_checkdetails"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginLeft="20dp"
-        android:layout_marginRight="20dp"
-        android:gravity="center|left"
-        android:lineSpacingExtra="3dp"
-        android:lineSpacingMultiplier="1.2"
-        android:textColor="#008BDB"
-        android:textSize="14dp"
-        android:visibility="visible" />
+        <LinearLayout
+            android:paddingTop="10dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1px"
-        android:layout_marginTop="16dp"
-        android:background="#E4E4E4" />
+            <ImageView
+                android:id="@+id/image"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginLeft="16dp"
+                android:layout_marginRight="16dp"
+                android:layout_marginBottom="10dp"
+                android:maxWidth="150dp"
+                android:maxHeight="150dp"
+                android:visibility="visible" />
+
+            <TextView
+                android:id="@+id/message"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="20dp"
+                android:layout_marginRight="20dp"
+                android:gravity="center|left"
+                android:lineSpacingExtra="3dp"
+                android:lineSpacingMultiplier="1.2"
+                android:textColor="#999999"
+                android:textSize="14dp"
+                tools:text="1、注意，请不要在正式商用网站及自己生产环境的面板申请测试版。
+                    \n2、所有新功能做完内部初审后都会第一时间向所有内测用户推送。
+                    \n3、内测版会有诸多小Bug，如遇到，可以论坛或QQ找我们，我们一定负责到底。
+                    \n4、内测意义在于为广大宝塔用户找Bug，宝塔团队再一次感谢您的积极参与。
+                    \n5、如果你不是愿意付出及肯折腾学习的人，我们不建议申请内测。
+                    \n6、每升级一个宝塔测试版版本可以获得50个宝塔币，宝塔币可用于兑换礼品。" />
+
+            <TextView
+                android:id="@+id/tv_checkdetails"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="20dp"
+                android:layout_marginRight="20dp"
+                android:gravity="center|left"
+                android:lineSpacingExtra="3dp"
+                android:lineSpacingMultiplier="1.2"
+                android:textColor="#008BDB"
+                android:textSize="14dp"
+                android:visibility="visible" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1px"
+                android:layout_marginTop="10dp"
+                android:background="#E4E4E4" />
+        </LinearLayout>
+    </ScrollView>
 
     <LinearLayout
         android:layout_width="match_parent"

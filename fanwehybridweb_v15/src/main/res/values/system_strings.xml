@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
 
-    <string name="app_name">聚客链</string>
-    <string name="tencent_appkey">EXLBZ-B7TH5-CTZIK-QNQFR-76OGO-GNFCS</string>
     <!-- 友盟推送配置 -->
     <string name="umeng_appkey">598c2c72f29d98106e000970</string>
     <string name="umeng_message_secret_push">8d39ef324b286bb62ee6050debf8a684</string>

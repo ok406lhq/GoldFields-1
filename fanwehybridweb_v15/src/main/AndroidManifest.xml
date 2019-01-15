@@ -71,10 +71,10 @@
         tools:ignore="GoogleAppIndexingWarning">
 
         <activity
-            android:name=".activity.TestActivity"
+            android:name=".activity.SplashActivity"
             android:configChanges="keyboard|keyboardHidden|orientation"
             android:exported="true"
-            android:label="黄金原野"
+            android:label="@string/app_name"
             android:screenOrientation="portrait"
             android:theme="@style/FullScreen"
             android:windowSoftInputMode="adjustPan">
@@ -124,12 +124,12 @@
             android:launchMode="singleTask"
             android:screenOrientation="portrait"
             android:theme="@style/FullScreenNormal" />
-        <!--<activity-->
-        <!--android:name=".activity.TestActivity"-->
-        <!--android:configChanges="orientation|keyboardHidden|screenSize"-->
-        <!--android:launchMode="singleTask"-->
-        <!--android:screenOrientation="portrait"-->
-        <!--android:theme="@style/FullScreenNormal" />-->
+        <activity
+            android:name=".activity.TestActivity"
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:launchMode="singleTask"
+            android:screenOrientation="portrait"
+            android:theme="@style/FullScreenNormal" />
 
         <!-- shareSDK begin -->
         <activity
